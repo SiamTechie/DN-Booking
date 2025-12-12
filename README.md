@@ -432,8 +432,8 @@ DN-Booking/
 ## ติดต่อและสนับสนุน
 
 หากมีข้อสงสัยเกี่ยวกับระบบนี้ กรุณาติดต่อทีมพัฒนา:
-- **อีเมล:** dev-team@dncenter.com
-- **LINE:** @dncenter-dev
+- **อีเมล:** itsm@healthup.co.th
+- **LINE:** aonneo
 
 ---
 
