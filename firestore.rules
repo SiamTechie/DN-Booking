@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Settings collection - anyone can read and write
+    // Note: In production, you should implement proper authentication
+    match /settings/{document} {
+      allow read, write: if true;
+    }
+
+    // Bookings collection - anyone can read, create, update, and delete
+    // Note: In production, you should restrict update/delete to authenticated users
+    match /bookings/{bookingId} {
+      allow read, write: if true;
+    }
+
+    // Admin Users collection - anyone can read and write
+    // Note: In production, you should implement proper authentication
+    match /adminUsers/{userId} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ปฏิทินการจอง | DN Center</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #5c3a9e;
+            --primary-light: #7851a9;
+            --primary-dark: #3d2668;
+            --success-color: #12b76a;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --text-primary: #2a1b3f;
+            --text-secondary: #5f4b7a;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f4efff;
+            --border-color: #e6ddf7;
+            --border-radius: 12px;
+            --border-radius-sm: 8px;
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f7f5fb;
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 15px 30px rgba(92, 25, 154, 0.25);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        header p {
+            margin: 0.5rem 0 0;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .back-link {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius-sm);
+            transition: var(--transition);
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+
+        .view-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+            background: var(--bg-primary);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 20px rgba(47, 29, 77, 0.08);
+        }
+
+        .view-mode-buttons {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--bg-secondary);
+            padding: 0.25rem;
+            border-radius: var(--border-radius-sm);
+        }
+
+        .view-mode-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .view-mode-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .calendar-navigation {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .calendar-navigation button {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--primary-color);
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .calendar-navigation button:hover {
+            background: var(--bg-secondary);
+        }
+
+        .calendar-navigation .current-period {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary-dark);
+            min-width: 200px;
+            text-align: center;
+        }
+
+        /* Month View Styles */
+        .calendar-month {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            background: var(--bg-primary);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 20px rgba(47, 29, 77, 0.08);
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary-dark);
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius-sm);
+            font-size: 0.9rem;
+        }
+
+        .calendar-day {
+            min-height: 100px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            padding: 0.5rem;
+            background: white;
+            transition: var(--transition);
+        }
+
+        .calendar-day.other-month {
+            background: #fafafa;
+            color: #999;
+        }
+
+        .calendar-day.today {
+            border: 2px solid var(--primary-color);
+            background: rgba(92, 25, 154, 0.05);
+        }
+
+        .calendar-day-number {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .calendar-day-bookings {
+            font-size: 0.75rem;
+        }
+
+        .calendar-booking-item {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.25rem;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Week View Styles */
+        .calendar-week {
+            display: grid;
+            grid-template-columns: 80px repeat(7, 1fr);
+            gap: 1px;
+            background: var(--border-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(47, 29, 77, 0.08);
+        }
+
+        .week-time-header {
+            background: var(--bg-secondary);
+            padding: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .week-day-header {
+            background: var(--bg-secondary);
+            padding: 0.75rem;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+
+        .week-time-slot {
+            background: var(--bg-secondary);
+            padding: 0.5rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .week-booking-cell {
+            background: white;
+            padding: 0.25rem;
+            min-height: 60px;
+        }
+
+        .week-booking-item {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Day View Styles */
+        .calendar-day-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+            background: transparent;
+        }
+
+        .day-view-slot {
+            background: white;
+            padding: 1rem;
+            min-height: 140px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: 0 8px 16px rgba(47, 29, 77, 0.08);
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .day-view-slot:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(47, 29, 77, 0.12);
+        }
+
+        .day-view-slot.has-booking {
+            background: rgba(92, 25, 154, 0.05);
+        }
+
+        .day-view-time {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(92, 25, 154, 0.12);
+            color: var(--primary-dark);
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .day-view-slot.has-booking .day-view-time {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 10px rgba(92, 25, 154, 0.25);
+        }
+
+        .day-view-booking {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.75rem;
+            border-radius: var(--border-radius-sm);
+        }
+
+        .day-view-booking h4 {
+            margin: 0 0 0.5rem;
+            font-size: 1rem;
+        }
+
+        .day-view-booking p {
+            margin: 0.25rem 0;
+            font-size: 0.85rem;
+        }
+
+        /* Booking Summary Styles */
+        .booking-summary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(47, 29, 77, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .booking-summary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: translate(30%, -30%);
+        }
+
+        .booking-summary h3 {
+            margin: 0 0 1.5rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1.25rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .summary-stat {
+            padding: 1.5rem 1rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .summary-stat:hover {
+            filter: brightness(1.05);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .summary-stat.stat-today {
+            background: #fdcb6e;
+            color: var(--text-primary);
+        }
+
+        .summary-stat.stat-week {
+            background: #e84393;
+            color: white;
+        }
+
+        .summary-stat.stat-month {
+            background: #00b894;
+            color: white;
+        }
+
+        .summary-stat.stat-total {
+            background: #6c5ce7;
+            color: white;
+        }
+
+        .summary-stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            display: block;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary-stat-label {
+            font-size: 0.95rem;
+            opacity: 0.95;
+            font-weight: 500;
+        }
+
+        .legend {
+            background: var(--bg-primary);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-top: 2rem;
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            box-shadow: 0 10px 20px rgba(47, 29, 77, 0.08);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .legend-box.booked {
+            background: var(--primary-color);
+        }
+
+        .legend-box.today {
+            border: 2px solid var(--primary-color);
+            background: rgba(92, 25, 154, 0.05);
+        }
+
+        .legend-box.available {
+            background: white;
+            border: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+    <a class="back-link" href="index.html"><i class="fas fa-arrow-left"></i> กลับสู่หน้าจอง</a>
+
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-calendar-alt"></i> ปฏิทินการจอง DN Center</h1>
+            <p>ดูตารางการจองนัดหมาย</p>
+        </header>
+
+        <!-- Booking Summary -->
+            <div class="booking-summary">
+                <h3><i class="fas fa-chart-line"></i> สรุปการจอง</h3>
+                <div class="summary-stats">
+                    <div class="summary-stat stat-today">
+                        <span class="summary-stat-value" id="today-bookings-count">0</span>
+                        <span class="summary-stat-label">วันนี้</span>
+                    </div>
+                    <div class="summary-stat stat-week">
+                        <span class="summary-stat-value" id="week-bookings-count">0</span>
+                        <span class="summary-stat-label">สัปดาห์นี้</span>
+                    </div>
+                    <div class="summary-stat stat-month">
+                        <span class="summary-stat-value" id="month-bookings-count">0</span>
+                        <span class="summary-stat-label">เดือนนี้</span>
+                    </div>
+                    <div class="summary-stat stat-total">
+                        <span class="summary-stat-value" id="total-bookings-count">0</span>
+                        <span class="summary-stat-label">ทั้งหมด</span>
+                    </div>
+                </div>
+            </div>
+
+        <div class="view-controls">
+            <div class="view-mode-buttons">
+                <button class="view-mode-btn active" data-view="month"><i class="fas fa-calendar"></i> รายเดือน</button>
+                <button class="view-mode-btn" data-view="week"><i class="fas fa-calendar-week"></i> รายสัปดาห์</button>
+                <button class="view-mode-btn" data-view="day"><i class="fas fa-calendar-day"></i> รายวัน</button>
+            </div>
+            <div class="calendar-navigation">
+                <button id="prev-period"><i class="fas fa-chevron-left"></i> ก่อนหน้า</button>
+                <span class="current-period" id="current-period"></span>
+                <button id="next-period">ถัดไป <i class="fas fa-chevron-right"></i></button>
+                <button id="today-btn"><i class="fas fa-calendar-day"></i> วันนี้</button>
+            </div>
+        </div>
+
+        <div id="calendar-container"></div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-box booked"></div>
+                <span>มีการจอง</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box today"></div>
+                <span>วันนี้</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box available"></div>
+                <span>ว่าง</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDsUYa3A80GWKkGW5LHJNevoMyfwaIxXrA",
+            authDomain: "booking-475115.firebaseapp.com",
+            projectId: "booking-475115",
+            storageBucket: "booking-475115.firebasestorage.app",
+            messagingSenderId: "566516479215",
+            appId: "1:566516479215:web:c5b96d4d151162ac2c971a",
+            measurementId: "G-H8GY3F8WHX"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // State
+        let currentDate = new Date();
+        let currentView = 'month';
+        let bookings = [];
+        let settings = {
+            timeSlots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30']
+        };
+
+        // Load data from Firestore
+        async function loadData() {
+            try {
+                // Load settings
+                const settingsDoc = await db.collection('settings').doc('main').get();
+                if (settingsDoc.exists) {
+                    settings = { ...settings, ...settingsDoc.data() };
+                }
+
+                // Load bookings
+                const bookingsSnapshot = await db.collection('bookings').get();
+                bookings = [];
+                bookingsSnapshot.forEach(doc => {
+                    bookings.push({ id: doc.id, ...doc.data() });
+                });
+
+                renderCalendar();
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        // Thai date formatter
+        function toThaiDate(dateStr) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const date = new Date(year, month - 1, day);
+            return date.toLocaleDateString('th-TH', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function updateBookingStats() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayStr = today.toISOString().split('T')[0];
+
+            // Calculate week range
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+
+            // Calculate month range
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+            const todayBookings = bookings.filter(b => b.date === todayStr).length;
+            const weekBookings = bookings.filter(b => {
+                const bDate = new Date(b.date);
+                return bDate >= weekStart && bDate <= weekEnd;
+            }).length;
+            const monthBookings = bookings.filter(b => {
+                const bDate = new Date(b.date);
+                return bDate >= monthStart && bDate <= monthEnd;
+            }).length;
+
+            document.getElementById('today-bookings-count').textContent = todayBookings;
+            document.getElementById('week-bookings-count').textContent = weekBookings;
+            document.getElementById('month-bookings-count').textContent = monthBookings;
+            document.getElementById('total-bookings-count').textContent = bookings.length;
+        }
+
+        function renderCalendar() {
+            const container = document.getElementById('calendar-container');
+
+            if (currentView === 'month') {
+                renderMonthView(container);
+            } else if (currentView === 'week') {
+                renderWeekView(container);
+            } else if (currentView === 'day') {
+                renderDayView(container);
+            }
+
+            updateCurrentPeriodLabel();
+            updateBookingStats();
+        }
+
+        function updateCurrentPeriodLabel() {
+            const label = document.getElementById('current-period');
+            const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                               'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+            const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+
+            if (currentView === 'month') {
+                label.textContent = `${thaiMonths[currentDate.getMonth()]} ${currentDate.getFullYear() + 543}`;
+            } else if (currentView === 'week') {
+                const weekStart = new Date(currentDate);
+                weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+                label.textContent = `${weekStart.getDate()} - ${weekEnd.getDate()} ${thaiMonths[currentDate.getMonth()]} ${currentDate.getFullYear() + 543}`;
+            } else {
+                label.textContent = `${thaiDays[currentDate.getDay()]} ${currentDate.getDate()} ${thaiMonths[currentDate.getMonth()]} ${currentDate.getFullYear() + 543}`;
+            }
+        }
+
+        function renderMonthView(container) {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDay = firstDay.getDay();
+            const daysInMonth = lastDay.getDate();
+
+            const thaiDays = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+
+            let html = '<div class="calendar-month">';
+
+            // Day headers
+            thaiDays.forEach(day => {
+                html += `<div class="calendar-day-header">${day}</div>`;
+            });
+
+            // Empty cells for days before month starts
+            for (let i = 0; i < startDay; i++) {
+                const prevMonthDay = new Date(year, month, -(startDay - i - 1));
+                html += `<div class="calendar-day other-month">
+                    <div class="calendar-day-number">${prevMonthDay.getDate()}</div>
+                </div>`;
+            }
+
+            // Days of the month
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dateStr = date.toISOString().split('T')[0];
+                const isToday = date.getTime() === today.getTime();
+                const dayBookings = bookings.filter(b => b.date === dateStr);
+
+                html += `<div class="calendar-day ${isToday ? 'today' : ''}" data-date="${dateStr}">
+                    <div class="calendar-day-number">${day}</div>
+                    <div class="calendar-day-bookings">`;
+
+                dayBookings.slice(0, 3).forEach(booking => {
+                    html += `<div class="calendar-booking-item" title="${booking.companyName} - ${booking.visitorName}">
+                        ${booking.time} ${booking.companyName}
+                    </div>`;
+                });
+
+                if (dayBookings.length > 3) {
+                    html += `<div class="calendar-booking-item">+${dayBookings.length - 3} เพิ่มเติม</div>`;
+                }
+
+                html += '</div></div>';
+            }
+
+            // Empty cells for days after month ends
+            const totalCells = startDay + daysInMonth;
+            const remainingCells = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+            for (let i = 1; i <= remainingCells; i++) {
+                const nextMonthDay = new Date(year, month + 1, i);
+                html += `<div class="calendar-day other-month">
+                    <div class="calendar-day-number">${nextMonthDay.getDate()}</div>
+                </div>`;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function renderWeekView(container) {
+            const weekStart = new Date(currentDate);
+            weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+
+            const thaiDays = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+            const timeSlots = settings.timeSlots;
+
+            let html = '<div class="calendar-week">';
+
+            // Header row
+            html += '<div class="week-time-header">เวลา</div>';
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(weekStart);
+                date.setDate(weekStart.getDate() + i);
+                html += `<div class="week-day-header">${thaiDays[i]}<br>${date.getDate()}</div>`;
+            }
+
+            // Time slots
+            timeSlots.forEach(time => {
+                html += `<div class="week-time-slot">${time}</div>`;
+
+                for (let i = 0; i < 7; i++) {
+                    const date = new Date(weekStart);
+                    date.setDate(weekStart.getDate() + i);
+                    const dateStr = date.toISOString().split('T')[0];
+                    const slotBookings = bookings.filter(b => b.date === dateStr && b.time === time);
+
+                    html += '<div class="week-booking-cell">';
+                    slotBookings.forEach(booking => {
+                        html += `<div class="week-booking-item" title="${booking.companyName} - ${booking.visitorName}">
+                            ${booking.companyName}
+                        </div>`;
+                    });
+                    html += '</div>';
+                }
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function renderDayView(container) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const timeSlots = settings.timeSlots;
+
+            let html = '<div class="calendar-day-view">';
+
+            timeSlots.forEach(time => {
+                const slotBookings = bookings.filter(b => b.date === dateStr && b.time === time);
+                const hasBooking = slotBookings.length > 0;
+
+                html += `<div class="day-view-slot ${hasBooking ? 'has-booking' : ''}">`;
+                html += `<div class="day-view-time">${time}</div>`;
+
+                slotBookings.forEach(booking => {
+                    html += `<div class="day-view-booking">
+                        <h4>${booking.companyName}</h4>
+                        <p><i class="fas fa-user"></i> ${booking.visitorName}</p>
+                        <p><i class="fas fa-phone"></i> ${booking.phone}</p>
+                        <p><i class="fas fa-envelope"></i> ${booking.email}</p>
+                        ${booking.recommendedProduct ? `<p><i class="fas fa-box"></i> ${booking.recommendedProduct}</p>` : ''}
+                        ${booking.notes ? `<p><i class="fas fa-note-sticky"></i> ${booking.notes}</p>` : ''}
+                    </div>`;
+                });
+
+                if (!hasBooking) {
+                    html += '<p style="color: #999; text-align: center;">ว่าง</p>';
+                }
+
+                html += '</div>';
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Navigation
+        document.querySelectorAll('.view-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.view-mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentView = btn.getAttribute('data-view');
+                renderCalendar();
+            });
+        });
+
+        document.getElementById('prev-period').addEventListener('click', () => {
+            if (currentView === 'month') {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+            } else if (currentView === 'week') {
+                currentDate.setDate(currentDate.getDate() - 7);
+            } else {
+                currentDate.setDate(currentDate.getDate() - 1);
+            }
+            renderCalendar();
+        });
+
+        document.getElementById('next-period').addEventListener('click', () => {
+            if (currentView === 'month') {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+            } else if (currentView === 'week') {
+                currentDate.setDate(currentDate.getDate() + 7);
+            } else {
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            renderCalendar();
+        });
+
+        document.getElementById('today-btn').addEventListener('click', () => {
+            currentDate = new Date();
+            renderCalendar();
+        });
+
+        // Real-time listener for bookings
+        db.collection('bookings').onSnapshot((snapshot) => {
+            console.log('Bookings updated:', snapshot.size);
+            bookings = [];
+            snapshot.forEach(doc => {
+                bookings.push({ id: doc.id, ...doc.data() });
+            });
+            renderCalendar();
+        });
+
+        // Initialize
+        loadData();
+    </script>
+</body>
+</html>
