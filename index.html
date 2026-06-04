@@ -992,9 +992,21 @@
             async function saveBooking(bookingData) {
                 try {
                     if (bookingData.id) {
-                        // Update existing booking
+                        // Update existing booking - skip duplicate check for updates
                         await db.collection('bookings').doc(bookingData.id).set(bookingData);
                     } else {
+                        // Create new booking - check for duplicates first
+                        // Server-side validation: Check if time slot is already booked
+                        const existingBookings = await db.collection('bookings')
+                            .where('date', '==', bookingData.date)
+                            .where('time', '==', bookingData.time)
+                            .limit(1)
+                            .get();
+
+                        if (!existingBookings.empty) {
+                            throw new Error('SLOT_ALREADY_BOOKED');
+                        }
+
                         // Create new booking with custom ID
                         const bookingId = generateBookingId();
                         bookingData.id = bookingId;
@@ -1393,7 +1405,16 @@
                     // Send email notifications
                     sendBookingNotification(savedBooking, 'created');
                 } catch (error) {
-                    alert('เกิดข้อผิดพลาดในการบันทึกการจอง กรุณาลองใหม่อีกครั้ง');
+                    if (error.message === 'SLOT_ALREADY_BOOKED') {
+                        alert('ขออภัย เวลาดังกล่าวถูกจองไปแล้ว กรุณาเลือกเวลาอื่น');
+                        // Reload bookings from Firestore and refresh time slots
+                        const snapshot = await db.collection('bookings').get();
+                        bookings.length = 0;
+                        snapshot.forEach(doc => bookings.push(doc.data()));
+                        generateTimeSlots();
+                    } else {
+                        alert('เกิดข้อผิดพลาดในการบันทึกการจอง กรุณาลองใหม่อีกครั้ง');
+                    }
                     console.error('Booking error:', error);
                     return;
                 }
